@@ -98,7 +98,7 @@ void nimble_host_task(void *param) {
 
 void bluetooth_init(void) {
 
-	led_init();
+	// led_init();
 
     ble_gatts_count_cfg(gatt_svcs);
     ble_gatts_add_svcs(gatt_svcs);

@@ -15,6 +15,8 @@ void app_main(void) {
 
     nimble_port_init();
 	
+	led_init();
+
 	bluetooth_init();
 
     ble_svc_gap_init();

@@ -14,3 +14,4 @@ Press Ctrl+O and then Ctrl+X
 
 Open a new terminal
 
+Ready to do : idf.py build monitor flash !!

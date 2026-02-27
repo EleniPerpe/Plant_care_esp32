@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solar Hub Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 50px; }
+        button { background: #f39c12; border: none; color: white; padding: 15px 32px; font-size: 16px; margin: 10px; border-radius: 8px; cursor: pointer; }
+        .off { background: #7f8c8d; }
+        #status { color: #2ecc71; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Solar Panel Hub</h1>
+    <div id="status">Disconnected</div>
+    <button onclick="connectBLE()">Σύνδεση με Bluetooth</button>
+    <br>
+    <button onclick="sendCommand('1')">LED LOOP ON</button>
+    <button class="off" onclick="sendCommand('0')">LED OFF</button>
+
+    <script>
+        let device, characteristic;
+        // Τα UUIDs που χρησιμοποιούμε στον ESP32
+        const SERVICE_UUID = 0x180F; 
+        const CHARACTERISTIC_UUID = 0x2A19;
+
+        async function connectBLE() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Solar_Panel_Hub' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                document.getElementById('status').innerText = "Connected to Hub!";
+            } catch (error) {
+                console.log("Error: " + error);
+            }
+        }
+
+        async function sendCommand(val) {
+            if (characteristic) {
+                const data = new TextEncoder().encode(val);
+                await characteristic.writeValue(data);
+            } else {
+                alert("Πρώτα κάνε σύνδεση!");
+            }
+        }
+    </script>
+</body>
+</html>
