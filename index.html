@@ -19,34 +19,44 @@
     <button class="off" onclick="sendCommand('0')">LED OFF</button>
 
     <script>
-        let device, characteristic;
-        // Τα UUIDs που χρησιμοποιούμε στον ESP32
-        const SERVICE_UUID = 0x180F; 
-        const CHARACTERISTIC_UUID = 0x2A19;
-
-        async function connectBLE() {
-            try {
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'Solar_Panel_Hub' }],
-                    optionalServices: [SERVICE_UUID]
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-                document.getElementById('status').innerText = "Connected to Hub!";
-            } catch (error) {
-                console.log("Error: " + error);
-            }
-        }
-
-        async function sendCommand(val) {
-            if (characteristic) {
-                const data = new TextEncoder().encode(val);
-                await characteristic.writeValue(data);
-            } else {
-                alert("Πρώτα κάνε σύνδεση!");
-            }
-        }
-    </script>
+		let device, characteristic;
+		const SERVICE_UUID = 0x180F; 
+		const CHARACTERISTIC_UUID = 0x2A19;
+	
+		async function connectBLE() {
+			alert("Ξεκινάει η αναζήτηση..."); // Debug alert 1
+			try {
+				// Δοκιμάζουμε χωρίς φίλτρο ονόματος για να δούμε αν φταίει το όνομα
+				device = await navigator.bluetooth.requestDevice({
+					acceptAllDevices: true,
+					optionalServices: [SERVICE_UUID]
+				});
+				
+				alert("Βρέθηκε συσκευή: " + device.name); // Debug alert 2
+				
+				const server = await device.gatt.connect();
+				const service = await server.getPrimaryService(SERVICE_UUID);
+				characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+				
+				document.getElementById('status').innerText = "Connected to " + device.name;
+				document.getElementById('status').style.color = "#2ecc71";
+			} catch (error) {
+				alert("Σφάλμα: " + error); // Θα μας πει αν το Bluetooth είναι κλειστό κλπ
+			}
+		}
+	
+		async function sendCommand(val) {
+			if (!characteristic) {
+				alert("Πρέπει πρώτα να συνδεθείς!");
+				return;
+			}
+			try {
+				const data = new TextEncoder().encode(val);
+				await characteristic.writeValue(data);
+			} catch (error) {
+				alert("Σφάλμα αποστολής: " + error);
+			}
+		}
+	</script>
 </body>
 </html>
