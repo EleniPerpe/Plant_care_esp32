@@ -20,41 +20,45 @@
 
     <script>
 		let device, characteristic;
-		const SERVICE_UUID = 0x180F; 
-		const CHARACTERISTIC_UUID = 0x2A19;
+		
+		// Χρησιμοποιούμε τα πλήρη UUIDs για μέγιστη συμβατότητα
+		const SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'; 
+		const CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb';
 	
 		async function connectBLE() {
-			alert("Ξεκινάει η αναζήτηση..."); // Debug alert 1
+			console.log("Attempting to connect..."); 
 			try {
-				// Δοκιμάζουμε χωρίς φίλτρο ονόματος για να δούμε αν φταίει το όνομα
 				device = await navigator.bluetooth.requestDevice({
-					acceptAllDevices: true,
-					optionalServices: [SERVICE_UUID]
+					// Ζητάμε όλες τις συσκευές αλλά δηλώνουμε ποιο service μας ενδιαφέρει
+					acceptAllDevices: true, 
+					optionalServices: [SERVICE_UUID] 
 				});
 				
-				alert("Βρέθηκε συσκευή: " + device.name); // Debug alert 2
+				alert("Σύνδεση με: " + (device.name || "Unknown Device"));
 				
 				const server = await device.gatt.connect();
 				const service = await server.getPrimaryService(SERVICE_UUID);
 				characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 				
-				document.getElementById('status').innerText = "Connected to " + device.name;
+				document.getElementById('status').innerText = "Connected!";
 				document.getElementById('status').style.color = "#2ecc71";
+				alert("Επιτυχής σύνδεση!");
 			} catch (error) {
-				alert("Σφάλμα: " + error); // Θα μας πει αν το Bluetooth είναι κλειστό κλπ
+				alert("Σφάλμα: " + error);
 			}
 		}
 	
 		async function sendCommand(val) {
 			if (!characteristic) {
-				alert("Πρέπει πρώτα να συνδεθείς!");
+				alert("Συνδέσου πρώτα!");
 				return;
 			}
 			try {
 				const data = new TextEncoder().encode(val);
 				await characteristic.writeValue(data);
+				console.log("Sent: " + val);
 			} catch (error) {
-				alert("Σφάλμα αποστολής: " + error);
+				alert("Αποτυχία αποστολής: " + error);
 			}
 		}
 	</script>

@@ -68,7 +68,7 @@ void start_advertising(void) {
 
     memset(&fields, 0, sizeof(fields));
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.name = (uint8_t *)"Solar_Panel_Hub";
+    fields.name = (uint8_t *)"Solar Panel Hub";
     fields.name_len = strlen((char *)fields.name);
     fields.name_is_complete = 1;
 
