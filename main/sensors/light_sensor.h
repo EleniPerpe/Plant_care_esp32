@@ -14,5 +14,6 @@ extern i2c_master_dev_handle_t dev_handle;
 
 void light_sensor_init();
 void light_sensor_task(void *pvParameters);
+void i2c_bus_recovery();
 
 #endif
