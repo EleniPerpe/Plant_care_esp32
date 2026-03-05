@@ -1,29 +1,16 @@
 #include "bluetooth.h"
-#include "string.h"
-#include "driver/gpio.h"
-#include "led_strip.h"
-#include "freertos/semphr.h"
-#include "services/gatt/ble_svc_gatt.h"
-#include "services/gap/ble_svc_gap.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
-const char* TAG = "Solar Panel Hub";
+static const char* TAG = "Solar Panel Hub";
 uint8_t own_addr_type;
 
-
-// Πρόσθεσε αυτό το handle στην κορυφή του αρχείου σου για να το βρίσκει το Task
-uint16_t light_val_handle;
-extern uint16_t current_light_value;
+uint16_t light_val_handle = 0;
+uint16_t current_light_value = 0;
 
 static int gatt_svr_chr_access_light(uint16_t conn_handle, uint16_t attr_handle,
                                    struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
 	int rc = os_mbuf_append(ctxt->om, &current_light_value, sizeof(current_light_value));
     return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-    // Αυτό επιτρέπει στο κινητό να κάνει "Read" την τελευταία τιμή αν θέλει
-    return 0;
 }
 
 static int device_write_callback(uint16_t conn_handle, uint16_t attr_handle,
@@ -119,17 +106,19 @@ void nimble_host_task(void *param) {
 }
 
 void bluetooth_init(void) {
-    // 1. Καθαρισμός παλαιών ρυθμίσεων
+	nimble_port_init();
     ble_gatts_reset();
 
-    // 2. Αρχικοποίηση βασικών υπηρεσιών
     ble_svc_gap_init();
     ble_svc_gatt_init();
 
-    // 3. Καταμέτρηση και προσθήκη των δικών σου υπηρεσιών (gatt_svcs)
     int rc = ble_gatts_count_cfg(gatt_svcs);
     assert(rc == 0);
 
     rc = ble_gatts_add_svcs(gatt_svcs);
     assert(rc == 0);
+
+	ble_svc_gap_device_name_set("Solar_Panel_Hub");
+    ble_hs_cfg.sync_cb = on_sync;
+    nimble_port_freertos_init(nimble_host_task);
 }
