@@ -27,9 +27,9 @@ void light_sensor_init()
     vTaskDelay(pdMS_TO_TICKS(100)); 
 
     uint8_t cmd_pwr[]    = {0x80, 0x01}; 
-    uint8_t cmd_gain[]   = {0xAA, 0x01}; 
-    uint8_t cmd_atime[]  = {0x81, 0x1D}; 
-    uint8_t cmd_astep[]  = {0xCA, 0xE7, 0x03}; 
+    uint8_t cmd_gain[]   = {0xAA, 0x03}; 
+    uint8_t cmd_atime[] = {0x81, 0x95};
+    uint8_t cmd_astep[] = {0xCA, 0x50, 0x00};
     uint8_t cmd_enable[] = {0x80, 0x03}; // Μόνο Spectral + Power
     uint8_t cmd_led_off[]= {0xBE, 0x00}; // GPIO Control -> OFF
 
@@ -68,10 +68,18 @@ void light_sensor_task(void *pvParameters) {
                 zero_count++;
                 if (zero_count > 2) {
                     ESP_LOGW(TAG, "Sensor stuck at 0. Re-enabling...");
-                    uint8_t enable_cmd[] = {0x80, 0x03}; 
-                    i2c_master_transmit(dev_handle, enable_cmd, 2, -1);
-					uint8_t led_off[] = {0xBE, 0x00}; 
-    				i2c_master_transmit(dev_handle, led_off, 2, -1);
+                    uint8_t cmd_gain[]   = {0xAA, 0x01}; 
+					uint8_t cmd_atime[] = {0x81, 0x3B};
+					uint8_t cmd_astep[] = {0xCA, 0x50, 0x00}; 
+					uint8_t cmd_led_off[]= {0xBE, 0x00}; 
+					uint8_t cmd_enable[] = {0x80, 0x03};
+
+					i2c_master_transmit(dev_handle, cmd_gain, 2, -1);
+					i2c_master_transmit(dev_handle, cmd_atime, 2, -1);
+					i2c_master_transmit(dev_handle, cmd_astep, 3, -1);
+					i2c_master_transmit(dev_handle, cmd_led_off, 2, -1);
+					i2c_master_transmit(dev_handle, cmd_enable, 2, -1);
+
                     zero_count = 0;
                 }
             } else {
