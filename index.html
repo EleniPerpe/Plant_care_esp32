@@ -8,14 +8,15 @@
         button { background: #f39c12; border: none; color: white; padding: 15px 32px; font-size: 16px; margin: 10px; border-radius: 8px; cursor: pointer; }
         .off { background: #7f8c8d; }
         #status { color: #2ecc71; margin-bottom: 20px; }
+		#light-val { font-size: 2em; color: #f1c40f; margin: 20px; }
     </style>
 </head>
 <body>
     <h1>Solar Panel Hub</h1>
     <div id="status">Disconnected</div>
-    <button onclick="connectBLE()">Σύνδεση με Bluetooth</button>
+    <button onclick="connectBLE()">Connection with Bluetooth</button>
     <br>
-    <button onclick="sendCommand('1')">LED LOOP ON</button>
+    <button onclick="sendCommand('1')">LED ON</button>
     <button class="off" onclick="sendCommand('0')">LED OFF</button>
 
     <script>
@@ -60,6 +61,25 @@
 			} catch (error) {
 				alert("Αποτυχία αποστολής: " + error);
 			}
+		}
+
+		<div id="light-val">Light: --</div>
+
+		// Στο <script>, ανανέωσε το CHARACTERISTIC_UUID και πρόσθεσε το Notify
+		const LIGHT_UUID = '00002a76-0000-1000-8000-00805f9b34fb';
+
+		async function connectBLE() {
+			// ... προηγούμενος κώδικας ...
+			const lightChar = await service.getCharacteristic(LIGHT_UUID);
+			
+			// Ξεκινάμε τα Notifications
+			await lightChar.startNotifications();
+			lightChar.addEventListener('characteristicvaluechanged', (event) => {
+				let value = event.target.value;
+				// Διαβάζουμε 16-bit unsigned (Little Endian)
+				let lightInt = value.getUint16(0, true); 
+				document.getElementById('light-val').innerText = "Light: " + lightInt + " Lux (raw)";
+			});
 		}
 	</script>
 </body>

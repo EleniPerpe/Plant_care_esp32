@@ -13,6 +13,8 @@
 
 extern const char *TAG;
 extern uint8_t own_addr_type;
+// extern uint16_t light_val_handle;
+
 
 void start_advertising(void);
 void on_sync(void);

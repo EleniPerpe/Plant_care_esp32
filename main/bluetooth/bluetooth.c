@@ -3,12 +3,28 @@
 #include "driver/gpio.h"
 #include "led_strip.h"
 #include "freertos/semphr.h"
+#include "services/gatt/ble_svc_gatt.h"
+#include "services/gap/ble_svc_gap.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 const char* TAG = "Solar Panel Hub";
 uint8_t own_addr_type;
+
+
+// Πρόσθεσε αυτό το handle στην κορυφή του αρχείου σου για να το βρίσκει το Task
+uint16_t light_val_handle;
+extern uint16_t current_light_value;
+
+static int gatt_svr_chr_access_light(uint16_t conn_handle, uint16_t attr_handle,
+                                   struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+	int rc = os_mbuf_append(ctxt->om, &current_light_value, sizeof(current_light_value));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    // Αυτό επιτρέπει στο κινητό να κάνει "Read" την τελευταία τιμή αν θέλει
+    return 0;
+}
 
 static int device_write_callback(uint16_t conn_handle, uint16_t attr_handle,
                                 struct ble_gatt_access_ctxt *ctxt, void *arg) 
@@ -31,12 +47,18 @@ static int device_write_callback(uint16_t conn_handle, uint16_t attr_handle,
 static const struct ble_gatt_svc_def gatt_svcs[] = {
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(0x180F), // Battery Service (παράδειγμα)
+        .uuid = BLE_UUID16_DECLARE(0x180F), 
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
-                .uuid = BLE_UUID16_DECLARE(0x2A19),
+                .uuid = BLE_UUID16_DECLARE(0x2A19), // LED Control
                 .access_cb = device_write_callback,
-                .flags = BLE_GATT_CHR_F_WRITE, // Επιτρέπουμε το γράψιμο
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(0x2A76), // Light Sensor Data
+                .access_cb = gatt_svr_chr_access_light, // <--- ΟΧΙ NULL πλέον
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                .val_handle = &light_val_handle,
             },
             {0}
         },
@@ -97,9 +119,17 @@ void nimble_host_task(void *param) {
 }
 
 void bluetooth_init(void) {
+    // 1. Καθαρισμός παλαιών ρυθμίσεων
+    ble_gatts_reset();
 
-	// led_init();
+    // 2. Αρχικοποίηση βασικών υπηρεσιών
+    ble_svc_gap_init();
+    ble_svc_gatt_init();
 
-    ble_gatts_count_cfg(gatt_svcs);
-    ble_gatts_add_svcs(gatt_svcs);
+    // 3. Καταμέτρηση και προσθήκη των δικών σου υπηρεσιών (gatt_svcs)
+    int rc = ble_gatts_count_cfg(gatt_svcs);
+    assert(rc == 0);
+
+    rc = ble_gatts_add_svcs(gatt_svcs);
+    assert(rc == 0);
 }
