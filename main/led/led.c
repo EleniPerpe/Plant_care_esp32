@@ -27,6 +27,8 @@ void led_loop_task(void *pvParameters) {
                     xSemaphoreGive(led_mutex);
                 }
                 vTaskDelay(pdMS_TO_TICKS(400));
+    			ESP_LOGI(TAG, "LED module initialized");
+
             }
         } else {
             vTaskDelay(pdMS_TO_TICKS(100));

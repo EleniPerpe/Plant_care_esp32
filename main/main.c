@@ -16,9 +16,11 @@ void app_main(void) {
 
     led_init();
 
+	// led_start_loop();
+
     bluetooth_init(); 
 
-    xTaskCreate(light_sensor_task, "light_task", 8192, NULL, 10, NULL);
+    xTaskCreate(light_sensor_task, "light_task", 8192, NULL, 5, NULL);
     
     ESP_LOGI(TAG, "System Initialized Successfully");
 }
