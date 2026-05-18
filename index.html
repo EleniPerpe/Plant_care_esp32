@@ -7,80 +7,80 @@
         body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 50px; }
         button { background: #f39c12; border: none; color: white; padding: 15px 32px; font-size: 16px; margin: 10px; border-radius: 8px; cursor: pointer; }
         .off { background: #7f8c8d; }
-        #status { color: #2ecc71; margin-bottom: 20px; }
-		#light-val { font-size: 2em; color: #f1c40f; margin: 20px; }
+        #status { color: #e74c3c; font-size: 1.2em; margin-bottom: 20px; }
+        #light-val { font-size: 2em; color: #f1c40f; margin: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>Solar Panel Hub</h1>
     <div id="status">Disconnected</div>
+    <div id="light-val">Light: -- Lux</div>
+    
     <button onclick="connectBLE()">Connection with Bluetooth</button>
-    <br>
+    <br><br>
     <button onclick="sendCommand('1')">LED ON</button>
     <button class="off" onclick="sendCommand('0')">LED OFF</button>
 
     <script>
-		let device, characteristic;
-		
-		// Χρησιμοποιούμε τα πλήρη UUIDs για μέγιστη συμβατότητα
-		const SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'; 
-		const CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb';
-	
-		async function connectBLE() {
-			console.log("Attempting to connect..."); 
-			try {
-				device = await navigator.bluetooth.requestDevice({
-					// Ζητάμε όλες τις συσκευές αλλά δηλώνουμε ποιο service μας ενδιαφέρει
-					acceptAllDevices: true, 
-					optionalServices: [SERVICE_UUID] 
-				});
-				
-				alert("Σύνδεση με: " + (device.name || "Unknown Device"));
-				
-				const server = await device.gatt.connect();
-				const service = await server.getPrimaryService(SERVICE_UUID);
-				characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-				
-				document.getElementById('status').innerText = "Connected!";
-				document.getElementById('status').style.color = "#2ecc71";
-				alert("Επιτυχής σύνδεση!");
-			} catch (error) {
-				alert("Σφάλμα: " + error);
-			}
-		}
-	
-		async function sendCommand(val) {
-			if (!characteristic) {
-				alert("Συνδέσου πρώτα!");
-				return;
-			}
-			try {
-				const data = new TextEncoder().encode(val);
-				await characteristic.writeValue(data);
-				console.log("Sent: " + val);
-			} catch (error) {
-				alert("Αποτυχία αποστολής: " + error);
-			}
-		}
+        let device;
+        let ledCharacteristic;
+        let lightCharacteristic;
+        
+        // Καθαρά, πλήρη UUIDs συμβατά με το NimBLE του ESP32 σου
+        const SERVICE_UUID        = '0000180f-0000-1000-8000-00805f9b34fb'; 
+        const LED_CHAR_UUID       = '00002a19-0000-1000-8000-00805f9b34fb';
+        const LIGHT_CHAR_UUID     = '00002a76-0000-1000-8000-00805f9b34fb';
+    
+        async function connectBLE() {
+            console.log("Attempting to connect..."); 
+            try {
+                // Ζητάμε φιλτράρισμα με το σωστό όνομα που βάλαμε στον ESP32
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Solar Panel Hub' }],
+                    optionalServices: [SERVICE_UUID] 
+                });
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                
+                // 1. Σύνδεση με την Characteristic των LED
+                ledCharacteristic = await service.getCharacteristic(LED_CHAR_UUID);
+                
+                // 2. Σύνδεση με την Characteristic του Αισθητήρα Φωτός
+                lightCharacteristic = await service.getCharacteristic(LIGHT_CHAR_UUID);
+                
+                // Ενεργοποίηση αυτόματων Live Notifications (Όπως στο nRF Connect!)
+                await lightCharacteristic.startNotifications();
+                lightCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    let value = event.target.value;
+                    // Ανάγνωση 16-bit Unsigned Integer (Little Endian)
+                    let lightInt = value.getUint16(0, true); 
+                    document.getElementById('light-val').innerText = "Light: " + lightInt + " Lux";
+                });
 
-		<div id="light-val">Light: --</div>
-
-		// Στο <script>, ανανέωσε το CHARACTERISTIC_UUID και πρόσθεσε το Notify
-		const LIGHT_UUID = '00002a76-0000-1000-8000-00805f9b34fb';
-
-		async function connectBLE() {
-			// ... προηγούμενος κώδικας ...
-			const lightChar = await service.getCharacteristic(LIGHT_UUID);
-			
-			// Ξεκινάμε τα Notifications
-			await lightChar.startNotifications();
-			lightChar.addEventListener('characteristicvaluechanged', (event) => {
-				let value = event.target.value;
-				// Διαβάζουμε 16-bit unsigned (Little Endian)
-				let lightInt = value.getUint16(0, true); 
-				document.getElementById('light-val').innerText = "Light: " + lightInt + " Lux (raw)";
-			});
-		}
-	</script>
+                // Ενημέρωση UI για επιτυχή σύνδεση
+                document.getElementById('status').innerText = "Connected!";
+                document.getElementById('status').style.color = "#2ecc71";
+                
+            } catch (error) {
+                alert("Σφάλμα σύνδεσης: " + error);
+                console.error(error);
+            }
+        }
+    
+        async function sendCommand(val) {
+            if (!ledCharacteristic) {
+                alert("Συνδέσου πρώτα!");
+                return;
+            }
+            try {
+                const data = new TextEncoder().encode(val);
+                await ledCharacteristic.writeValue(data);
+                console.log("Sent: " + val);
+            } catch (error) {
+                alert("Αποτυχία αποστολής: " + error);
+            }
+        }
+    </script>
 </body>
 </html>
