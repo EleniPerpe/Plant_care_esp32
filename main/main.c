@@ -14,7 +14,7 @@ void app_main(void) {
 
 	light_sensor_init();
 
-    led_init();
+    // led_init();
 
 	// led_start_loop();
 

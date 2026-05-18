@@ -203,6 +203,17 @@ void light_sensor_task(void *pvParameters) {
         float basic = vis_avg / (gain_mult() * 120.10f);
         sensor_data.lux = basic * 0.8f * 1000.0f;
 
+		// Ενημερώνουμε τη μεταβλητή του Bluetooth με το ακέραιο LUX
+        current_light_value = (uint16_t)sensor_data.lux;
+
+        // Αν υπάρχει ενεργή σύνδεση Bluetooth, στέλνουμε αυτόματα Notification
+        if (light_val_handle != 0) {
+            struct os_mbuf *om = ble_hs_mbuf_from_flat(&current_light_value, sizeof(current_light_value));
+            if (om != NULL) {
+                ble_gatts_notify_custom(0, light_val_handle, om); // Στέλνει το LUX στον αέρα!
+            }
+        }
+
         // Εκτύπωση
         ESP_LOGI(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         ESP_LOGI(TAG, "  LUX: %.1f  |  Gain: %.0fx  |  STATUS: ADAFRUIT MATCH", sensor_data.lux, gain_mult());
