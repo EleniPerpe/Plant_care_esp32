@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
     <title>Solar Hub Control</title>
@@ -80,6 +80,77 @@
             } catch (error) {
                 alert("Αποτυχία αποστολής: " + error);
             }
+        }
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solar Hub Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 50px; }
+        button { background: #f39c12; border: none; color: white; padding: 15px 32px; font-size: 16px; margin: 10px; border-radius: 8px; cursor: pointer; width: 80%; max-width: 300px; }
+        .off { background: #7f8c8d; }
+        .spectrum-btn { background: #9b59b6; } /* Μωβ κουμπί για το φάσμα */
+        #status { color: #e74c3c; font-size: 1.2em; margin-bottom: 20px; }
+        #light-val { font-size: 2em; color: #f1c40f; margin: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Solar Panel Hub</h1>
+    <div id="status">Disconnected</div>
+    <div id="light-val">Light: -- Lux</div>
+    
+    <button onclick="connectBLE()">Connection with Bluetooth</button>
+    <br><br>
+    <button onclick="sendCommand('1')">LED ON</button>
+    <button class="off" onclick="sendCommand('0')">LED OFF</button>
+    <br><br>
+    <button class="spectrum-btn" onclick="location.href='./sensors_gui/spectrum.html'">Light Spectrum</button>
+
+    <script>
+        let device, ledCharacteristic, lightCharacteristic;
+        const SERVICE_UUID        = '0000180f-0000-1000-8000-00805f9b34fb'; 
+        const LED_CHAR_UUID       = '00002a19-0000-1000-8000-00805f9b34fb';
+        const LIGHT_CHAR_UUID     = '00002a76-0000-1000-8000-00805f9b34fb';
+    
+        async function connectBLE() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Solar Panel Hub' }],
+                    optionalServices: [SERVICE_UUID] 
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                
+                ledCharacteristic = await service.getCharacteristic(LED_CHAR_UUID);
+                lightCharacteristic = await service.getCharacteristic(LIGHT_CHAR_UUID);
+                
+                await lightCharacteristic.startNotifications();
+                lightCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    let value = event.target.value;
+                    let lightInt = value.getUint16(0, true); 
+                    document.getElementById('light-val').innerText = "Light: " + lightInt + " Lux";
+                    // Αποθήκευση στο sessionStorage για να το θυμάται αν αλλάξεις σελίδα
+                    sessionStorage.setItem('last_lux', lightInt);
+                });
+
+                document.getElementById('status').innerText = "Connected!";
+                document.getElementById('status').style.color = "#2ecc71";
+            } catch (error) {
+                alert("Σφάλμα σύνδεσης: " + error);
+            }
+        }
+    
+        async function sendCommand(val) {
+            if (!ledCharacteristic) { alert("Συνδέσου πρώτα!"); return; }
+            try {
+                const data = new TextEncoder().encode(val);
+                await ledCharacteristic.writeValue(data);
+            } catch (error) { alert("Αποτυχία: " + error); }
         }
     </script>
 </body>

@@ -207,10 +207,10 @@ void light_sensor_task(void *pvParameters) {
         current_light_value = (uint16_t)sensor_data.lux;
 
         // Αν υπάρχει ενεργή σύνδεση Bluetooth, στέλνουμε αυτόματα Notification
-        if (light_val_handle != 0) {
+        if (current_conn_handle != 0 && light_val_handle != 0) {
             struct os_mbuf *om = ble_hs_mbuf_from_flat(&current_light_value, sizeof(current_light_value));
             if (om != NULL) {
-                ble_gatts_notify_custom(0, light_val_handle, om); // Στέλνει το LUX στον αέρα!
+                ble_gatts_notify_custom(current_conn_handle, light_val_handle, om); // Στέλνει το LUX στον αέρα!
             }
         }
 

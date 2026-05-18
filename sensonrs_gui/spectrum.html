@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Light Spectrum Analysis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 30px; }
+        button { background: #9b59b6; border: none; color: white; padding: 12px 24px; font-size: 15px; margin: 10px; border-radius: 8px; cursor: pointer; }
+        .back-btn { background: #34495e; }
+        .spectrum-container { text-align: left; max-width: 400px; margin: 20px auto; background: #1e1e1e; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .channel-row { display: flex; align-items: center; margin: 12px 0; font-size: 1.1em; }
+        .color-dot { width: 20px; height: 20px; border-radius: 4px; margin-right: 15px; display: inline-block; }
+        .val { font-weight: bold; margin-left: auto; color: #f1c40f; }
+    </style>
+</head>
+<body>
+    <h1>Light Spectrum Analysis</h1>
+    <div id="status" style="color: #e74c3c;">Disconnected</div>
+    
+    <button onclick="connectSpectrumBLE()">Connect Spectrum</button>
+    <button class="back-btn" onclick="location.href='../index.html'">Back to Hub</button>
+
+    <div class="spectrum-container">
+        <div class="channel-row"><div class="color-dot" style="background: #7000ff;"></div> F1 (415nm Violet): <span id="f1" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #3800ff;"></div> F2 (435nm Indigo): <span id="f2" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #0066ff;"></div> F3 (470nm Blue): <span id="f3" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #00ffcc;"></div> F4 (515nm Cyan): <span id="f4" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #00ff00;"></div> F5 (555nm Green): <span id="f5" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #ffaa00;"></div> F6 (590nm Orange): <span id="f6" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #ff0000;"></div> F7 (630nm Red): <span id="f7" class="val">--</span></div>
+        <div class="channel-row"><div class="color-dot" style="background: #990000;"></div> F8 (680nm Deep Red): <span id="f8" class="val">--</span></div>
+    </div>
+
+    <script>
+        let device, spectrumCharacteristic;
+        const SERVICE_UUID  = '0000180f-0000-1000-8000-00805f9b34fb'; 
+        // Θα χρησιμοποιήσουμε μια νέα Characteristic αργότερα για όλο το φάσμα
+        const SPECTRUM_CHAR_UUID = '00002a76-0000-1000-8000-00805f9b34fb'; 
+
+        async function connectSpectrumBLE() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Solar Panel Hub' }],
+                    optionalServices: [SERVICE_UUID] 
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                spectrumCharacteristic = await service.getCharacteristic(SPECTRUM_CHAR_UUID);
+                
+                await spectrumCharacteristic.startNotifications();
+                spectrumCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    let value = event.target.value;
+                    
+                    // Αν λαμβάνουμε μόνο το LUX για τώρα, το βάζουμε δοκιμαστικά στο F1
+                    if (value.byteLength == 2) {
+                        let lux = value.getUint16(0, true);
+                        document.getElementById('f1').innerText = lux;
+                    } 
+                    // Όταν στείλουμε και τα 8 κανάλια (16 bytes), θα ξελειδώσει αυτό αυτόματα:
+                    else if (value.byteLength >= 16) {
+                        document.getElementById('f1').innerText = value.getUint16(0, true);
+                        document.getElementById('f2').innerText = value.getUint16(2, true);
+                        document.getElementById('f3').innerText = value.getUint16(4, true);
+                        document.getElementById('f4').innerText = value.getUint16(6, true);
+                        document.getElementById('f5').innerText = value.getUint16(8, true);
+                        document.getElementById('f6').innerText = value.getUint16(10, true);
+                        document.getElementById('f7').innerText = value.getUint16(12, true);
+                        document.getElementById('f8').innerText = value.getUint16(14, true);
+                    }
+                });
+
+                document.getElementById('status').innerText = "Connected to Spectrum Engine!";
+                document.getElementById('status').style.color = "#2ecc71";
+            } catch (error) {
+                alert("Σφάλμα σύνδεσης φάσματος: " + error);
+            }
+        }
+    </script>
+</body>
+</html>

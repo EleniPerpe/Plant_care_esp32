@@ -5,6 +5,7 @@ uint8_t own_addr_type;
 
 uint16_t light_val_handle = 0;
 uint16_t current_light_value = 0;
+uint16_t current_conn_handle = 0;
 
 static int gatt_svr_chr_access_light(uint16_t conn_handle, uint16_t attr_handle,
                                    struct ble_gatt_access_ctxt *ctxt, void *arg)
@@ -57,10 +58,12 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
             ESP_LOGI(TAG, "Connected! Status: %d", event->connect.status);
+			current_conn_handle = event->connect.conn_handle;
             break;
 
         case BLE_GAP_EVENT_DISCONNECT:
             ESP_LOGI(TAG, "Disconnected! Reason: %d. Restarting advertising...", event->disconnect.reason);
+			current_conn_handle = 0;
             start_advertising();
             break;
 
@@ -118,7 +121,7 @@ void bluetooth_init(void) {
     rc = ble_gatts_add_svcs(gatt_svcs);
     assert(rc == 0);
 
-	ble_svc_gap_device_name_set("Solar_Panel_Hub");
+	ble_svc_gap_device_name_set("Solar Panel Hub");
     ble_hs_cfg.sync_cb = on_sync;
     nimble_port_freertos_init(nimble_host_task);
 }

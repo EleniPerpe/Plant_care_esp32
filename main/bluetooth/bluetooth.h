@@ -22,6 +22,7 @@
 
 extern uint16_t light_val_handle;
 extern uint16_t current_light_value;
+extern uint16_t current_conn_handle;
 
 void start_advertising(void);
 void on_sync(void);
